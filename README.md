@@ -1,1 +1,1 @@
-trade framework for practical user
+trade framework for practical use
