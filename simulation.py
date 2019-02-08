@@ -67,7 +67,7 @@ def robo_loop():
     store = DataSource()
     root = Root(store=store)
     #robo = Nanit(symbol="Si-3.19", store=store)
-    robo = Arbitrage(store=store)
+    robo = Arbitrage(parent=root)
     mount(root, robo)
     add_child(root, robo)
 
@@ -78,6 +78,9 @@ def robo_loop():
         robo.profit_history.append(robo.profit())
 
     root.on('trade', on_new_trade)
+
+    print(store.get_dom())
+    input()
 
     actions = []
     while True:

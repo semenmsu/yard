@@ -3,12 +3,15 @@ from algo.nanit import *
 
 
 class Arbitrage:
-    def __init__(self, store):
-        self.store = store
-        self.si = store.subscribe("Si-3.19", self)
-        self.rts = store.subscribe("RTS-3.19", self)
-        self.n_si = Nanit(self.si.symbol, store=store)
-        self.n_rts = Nanit(self.rts.symbol, store=store)
+    def __init__(self, parent):
+        self.store = parent.store
+        self.parent = parent
+        self.uniq_name = "arbitrage"
+        self.location = parent.location+"arbitrage/"
+        self.si = self.store.subscribe("Si-3.19", self)
+        self.rts = self.store.subscribe("RTS-3.19", self)
+        self.n_si = Nanit(self.si.symbol, parent=self)
+        self.n_rts = Nanit(self.rts.symbol, parent=self)
         self.profit_history = []
         self.need_update = False
 

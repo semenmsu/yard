@@ -4,7 +4,7 @@ from algo.events import DataOrderEvent
 
 
 class Nanit:
-    def __init__(self, symbol,  store):
+    def __init__(self, symbol,  parent):
 
         #mount(self, self.long)
         #mount(self, self.short)
@@ -16,8 +16,9 @@ class Nanit:
         self.sell_limit = -5
         self.current_price = 0
         self.profit_history = []
-        self.store = store
-        self.si = store.subscribe(symbol, self)
+        self.store = parent.store
+        self.si = self.store.subscribe(symbol, self)
+        self.location = parent.location+symbol+"/"
         self.long = Order(instrument=self.si, dir=BUY)
         self.short = Order(instrument=self.si, dir=SELL)
 

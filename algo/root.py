@@ -18,6 +18,7 @@ class Root:
         self.nodes_by_extid = dict()  # ext_id
         self.nodes_by_orderid = dict()
         self.trade_callbacks = []
+        self.location = "/"
 
     def __add_child__(self, child):
         self.__childs.append(child)

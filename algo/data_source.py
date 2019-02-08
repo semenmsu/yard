@@ -23,3 +23,12 @@ class DataSource:
             self.symbols[symbol].subscribers.append(source)
 
         return self.symbols[symbol]
+
+    def get_dom(self):
+        uniq_locations = []
+        for symbol in self.symbols.keys():
+            for subscriber in self.symbols[symbol].subscribers:
+                if not subscriber.location in uniq_locations:
+                    uniq_locations.append(subscriber.location)
+
+        return uniq_locations
