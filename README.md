@@ -28,14 +28,13 @@ def data_stream(symbols=[], settings={}):
     sender.connect("inproc://robo")
     data_service = shared_context.socket(zmq.SUB)
     data_service.connect("tcp://localhost:5561")
-
     for symbol in symbols:
         to_bytes = bytes(symbol,"ascii")
         data_service.subscribe(to_bytes)
-
     while True:
         msg = data_service.recv()
         sender.send_json({'data': msg})
+
 
 def robo_loop():
     receiver = shared_context.socket(zmq.SUB)
@@ -46,11 +45,13 @@ def robo_loop():
         msg = receiver.recv_json()
         #... process message and apply to robo
 
+
 def run():
     data = threading.Thread(target=data_stream, args(["Si-3.19", "RTS-3.19"])
     data.daemon = True
     data.start()
     robo_loop()
+
 
 run()
 ```
