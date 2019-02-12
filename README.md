@@ -20,6 +20,7 @@ data = threading.Thread(target=data_stream, args(["Si-3.19", "RTS-3.19"], settin
 
 ```python
 import zmq
+import threading
 
 shared_context = zmq.Context()
 
@@ -40,7 +41,6 @@ def robo_loop():
     receiver = shared_context.socket(zmq.SUB)
     receiver.bind("inproc://robo")
     receiver.subscribe(b'')
-
     while True:
         msg = receiver.recv_json()
         #... process message and apply to robo
@@ -55,3 +55,36 @@ def run():
 
 run()
 ```
+
+В такой архитектуре мы получаем один поток для всей бизнес логики, в этом потоке отсуствуют проблемы с блокирующими операциями, отсутствуют проблемы с синхронизацией. Потенциально такую архитектуру легко разнести по разным процессам, просто сменив zeromq протокол.
+
+### Orders (медленный вариант)
+
+- возможность хранить в независимом месте все ордера (One Source of Truth)
+- возможность запускать новых роботов без дополнительных настроек
+- понятный интерфейс для взаимодействия отвязанный от внутренних реализций
+- надежность, репликация данных
+- возможость проводить анализ без нагрузки на основную систему
+
+Используется MongoDb и change stream для нотификации системы. Замеры показали в районе 1-3мс латенси в системе robo -> order_gateway
+
+Пример:
+
+```python
+def trades_stream(robo_name, config={}):
+        sender = shared_context.socket(zmq.PUB)
+        sender.connect("inproc://robo")
+        url = "mongodb://localhost:27017"
+        client = MongoClient(url, socketKeepAlive=True)
+        pipeline = [
+                {"$match": {"fullDocument.name", robo_name, "operationType":"insert"}},
+                {"$project": {"fullDocument._id": 0}}
+        ]
+        options = {}
+        with db.trades.watch(pipeline, **options) as stream:
+                for change in stream:
+                        if 'fullDocument' in change:
+                                sender.send_json('trades': change['fullDocument'])
+```
+
+В коде мы подписываемся на collection trades только на trades, которые имеют robo_name name, позволяя робтам легко друг-друга различать

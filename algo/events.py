@@ -13,6 +13,13 @@ class DataEvent:
         return f"{colors.DATA_EVENT} DATA_EVENT {colors.EVENT}  {ret}{colors.ENDC}"
 
 
+class ControlEvent:
+    def __init__(self, ctrl, to, params):
+        self.params = params
+        self.to = to
+        self.ctrl = ctrl
+
+
 class NewReplyEvent:
     def __init__(self, code, order_id):
         self.name = "new_reply"
