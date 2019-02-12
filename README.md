@@ -81,10 +81,10 @@ def trades_stream(robo_name, config={}):
                 {"$project": {"fullDocument._id": 0}}
         ]
         options = {}
+        db = client.test
         with db.trades.watch(pipeline, **options) as stream:
                 for change in stream:
-                        if 'fullDocument' in change:
-                                sender.send_json('trades': change['fullDocument'])
+                        sender.send_json('trades': change['fullDocument'])
 ```
 
 В коде мы подписываемся на collection trades только на trades, которые имеют robo_name name, позволяя робтам легко друг-друга различать
