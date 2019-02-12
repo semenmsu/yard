@@ -51,6 +51,7 @@ class Action:
 
 class NewOrder:
     def __init__(self, isin_id, dir):
+        self.name = "new_order"
         self.user_code = 1
         self.isin_id = isin_id
         self.symbol = None
@@ -68,11 +69,13 @@ class NewOrder:
 
 class CancelOrder:
     def __init__(self, isin_id):
+        self.name = "cancel_order"
         self.isin_id = isin_id
         self.user_code = 1
         self.order_id = 0
         self.vid = 0
         self.source = None
+        self.symbol = None
 
     def __repr__(self):
         ret = f"order_id={self.order_id} vid={self.vid} "
