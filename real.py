@@ -6,7 +6,7 @@ from algo.data_source import *
 from algo.root import *
 from algo.nanit import *
 from algo.dom import *
-from util import *
+#from util import *
 import json
 
 shared_context = zmq.Context()
@@ -21,7 +21,8 @@ def to_robo(func):
 
             if channel == "data_stream":
                 event = json.loads(event)
-                data = DataEvent(event['symbol'], event['price'])
+                price = (float(event['bid'])+float(event['ask']))/2
+                data = DataEvent(event['symbol'], int(price))
                 sender.send_pyobj(data)
             elif channel == "trades_stream":
                 _type = event['name']
@@ -50,9 +51,11 @@ def data_stream():
             context = zmq.Context()
             receiver = context.socket(zmq.SUB)
             receiver.connect("tcp://127.0.0.1:5561")
-            receiver.subscribe(b'')
+            receiver.subscribe(b'Si-3.19')
             while True:
-                yield "data_stream", receiver.recv_json()
+                msg = receiver.recv_multipart()
+                body = json.loads(msg[1].decode("ascii"))
+                yield "data_stream", msg[1].decode("ascii")
         except Exception as err:
             print("Exception: ", err)
         finally:
@@ -74,7 +77,7 @@ def trades_stream():
         try:
             client = MongoClient(url, socketKeepAlive=True)
             db = client.test
-            with db.test_reply.watch(pipeline, **options) as stream:
+            with db.trades.watch(pipeline, **options) as stream:
                 for change in stream:
                     yield "trades_stream", change['fullDocument']
         except Exception as err:
@@ -95,7 +98,7 @@ def get_orders_publisher():
             print(order)
 
             print(json.dumps(order.__dict__))
-            db.test_trades.insert_one(order.__dict__)
+            db.orders.insert_one(order.__dict__)
     return send
 
 
@@ -123,10 +126,10 @@ def robo_loop():
         # event = receiver.recv_json()
         event = receiver.recv_pyobj()
         print(event)
-        # for action in root.do(event):
-        #    actions.append(action)
-        # publish(actions)
-        #actions = []
+        for action in root.do(event):
+            actions.append(action)
+        publish(actions)
+        actions = []
 
 
 def run():
