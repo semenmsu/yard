@@ -3,11 +3,12 @@ import copy
 from algo.utils import *
 from algo.events import *
 
+
 class OrderState:
 
     def __init__(self, dir):
         self.ext_id = 0
-        self.order_id = 0 #?
+        self.order_id = 0  # ?
         self.price = 0
         self.amount = 0
         self.rest_amount = 0
@@ -48,7 +49,6 @@ class Action:
         self.name = name
 
 
-
 class NewOrder:
     def __init__(self, isin_id, dir):
         self.name = "new_order"
@@ -61,6 +61,11 @@ class NewOrder:
         self.dir = dir
         self.vid = 0
         self.source = None
+
+    def toDict(self, robo_name, to):
+        d = {"from": robo_name, "to": to, "type": self.name, "price": str(self.price), "amount": str(self.amount),
+             "side": str(self.dir), "symbol": self.symbol, "ext_id": str(self.ext_id)}
+        return d
 
     def __repr__(self):
         ret = f"price={self.price} amount={self.amount} dir={self.dir} vid={self.vid} ext_id={self.ext_id}"
@@ -77,15 +82,21 @@ class CancelOrder:
         self.source = None
         self.symbol = None
 
+    def toDict(self, robo_name, to):
+        d = {"from": robo_name, "to": to, "type": self.name,
+             "order_id": str(self.order_id)}
+        return d
+
     def __repr__(self):
         ret = f"order_id={self.order_id} vid={self.vid} "
         return f"{colors.CANCEL_ORDER} CANCEL_ORDER {colors.ACTION}  {ret}  {colors.ENDC}"
+
 
 class ReleaseOrder:
     def __init__(self, vid, order_id):
         self.vid = vid
         self.order_id = order_id
-    
+
     def __repr__(self):
         ret = f"order_id={self.order_id} vid={self.vid} "
         return f"{colors.CANCEL_ORDER} RELEASE_ORDER {colors.ACTION}  {ret}  {colors.ENDC}"
@@ -94,7 +105,7 @@ class ReleaseOrder:
 class Order:
 
     def __init__(self, instrument, dir, restrictions=None):
-        self.name="long"
+        self.name = "long"
         self.instrument = instrument
         self.state = OrderState(dir)
         self.desire = OrderDesire()
@@ -105,10 +116,10 @@ class Order:
         self.is_settings_loaded = 0
         self.min_step_price = 1
         self.isin_id = 1
-        self.change_price_limit = 1  # custom settings
+        self.change_price_limit = 2  # custom settings
         self.dir = dir
-        self.time = 0 
-        self.vid = 0 #virtual id
+        self.time = 0
+        self.vid = 0  # virtual id
 
         if restrictions:
             self.restrictions = restrictions
@@ -138,7 +149,7 @@ class Order:
         if abs(price - self.state.price) > self.change_price_limit:
             return True
 
-        if self.state.amount > 0 and amount == 0: #should cancel
+        if self.state.amount > 0 and amount == 0:  # should cancel
             return True
         return False
 
@@ -189,10 +200,10 @@ class Order:
                 self.state.free()
 
         self.state.inc()
-     
+
         if self.state.status == FREE:
             return ReleaseOrder(self.vid, order_id)
-                
+
     def reply_trade(self, deal):
         #print("reply trade",deal)
         self.state.rest_amount -= deal.amount
@@ -210,7 +221,7 @@ class Order:
 
     def load_settings(self, settings):
         if not self.is_settings_loaded:
-            pass #load settings
+            pass  # load settings
             self.is_settings_loaded = True
 
     def update_time(self, time_event):
@@ -222,13 +233,13 @@ class Order:
 
 
     def handle_free_state(self):
-        #print("hande_free_state")
+        # print("hande_free_state")
         if self.want_trade() and not self.restrictions():
             return Action("new")
         return None
 
     def handle_new_state(self):
-        #print("hande_new_state")
+        # print("hande_new_state")
         if not self.want_trade() or self.price_changing_is_big() or self.restrictions():
             return Action("cancel")
         return None
@@ -266,7 +277,7 @@ class Order:
 
         return action
 
-    def do2(self , event = None):
+    def do2(self, event=None):
         action = None
 
         if isinstance(event, DataOrderEvent):
@@ -285,8 +296,8 @@ class Order:
         if action:
             yield action
 
-        #should robo react? (what to do for move from state to desire)    
-        action = self.generate_action() 
+        # should robo react? (what to do for move from state to desire)
+        action = self.generate_action()
 
         if action:
             self.state, order = self.next_state_and_order(
@@ -294,5 +305,3 @@ class Order:
             if order:
                 order.source = self
                 yield order
-
-        

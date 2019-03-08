@@ -21,24 +21,37 @@ def to_robo(func):
 
             if channel == "data_stream":
                 event = json.loads(event)
-                price = (float(event['bid'])+float(event['ask']))/2
+                price = (float(event['bid'])+float(event['ask']))/(2*1000000)
                 data = DataEvent(event['symbol'], int(price))
                 sender.send_pyobj(data)
-            elif channel == "trades_stream":
-                _type = event['name']
+            elif channel == "orders_stream":
+
+                _type = event['type']
 
                 reply = None
                 if _type == "new_reply":
                     reply = NewReplyEvent(event['code'], event['order_id'])
-                    reply.ext_id = event['ext_id']
+                    reply.ext_id = int(event['ext_id'])
                 elif _type == "cancel_reply":
                     reply = CancelReplyEvent(event['code'], event['amount'])
-                    reply.order_id = event['order_id']
+                    reply.order_id = int(event['order_id'])
                 elif _type == "trade_reply":
                     reply = TradeReplyEvent(
                         event['amount'], event['deal_price'])
-                    reply.order_id = event['order_id']
+                    reply.order_id = int(event['order_id'])
                 sender.send_pyobj(reply)
+            elif channel == "trades_stream":
+
+                action = int(event['action'])
+                if action == 2:
+                    intpart = int(event['deal_price']['intpart'])
+                    scale = int(event['deal_price']['scale'])
+                    deal_price = int(intpart/10**scale)
+                    reply = TradeReplyEvent(
+                        int(event['amount']), deal_price)
+                    reply.order_id = int(event['orderid'])
+                    sender.send_pyobj(reply)
+                # print(event)
 
             # sender.send_json(event)
     return pipe_to_robo
@@ -66,10 +79,11 @@ def data_stream():
 
 
 @to_robo
-def trades_stream():
-    url = "mongodb://localhost:27000"
+def orders_stream():
+    url = "mongodb://127.0.0.1:27000"
     pipeline = [
-        {"$match": {"operationType": "insert"}},
+        {"$match": {"operationType": "insert",
+                    "fullDocument.from": "cgate-gw", "fullDocument.to": "robo"}},
         {"$project": {"fullDocument._id": 0}}
     ]
     options = {}
@@ -77,28 +91,57 @@ def trades_stream():
         try:
             client = MongoClient(url, socketKeepAlive=True)
             db = client.test
-            with db.trades.watch(pipeline, **options) as stream:
+            coll = db['test']
+            with coll.watch(pipeline, **options) as stream:
+                for change in stream:
+                    yield "orders_stream", change['fullDocument']
+        except Exception as err:
+            print("Exception: ", err)
+        finally:
+            client.close()
+        print("[orders stream] wait 5 sec for reconnecting")
+        time.sleep(5)
+
+
+@to_robo
+def trades_stream():
+    url = "mongodb://127.0.0.1:27000"
+    pipeline = [
+        {"$match": {"operationType": "insert",
+                    "fullDocument.comment": "robo"}},
+        {"$project": {"fullDocument._id": 0}}
+    ]
+    options = {}
+    while True:
+        try:
+            client = MongoClient(url, socketKeepAlive=True)
+            db = client.test
+            coll = db['trades']
+            print("watch trades stream")
+            with coll.watch(pipeline, **options) as stream:
                 for change in stream:
                     yield "trades_stream", change['fullDocument']
         except Exception as err:
             print("Exception: ", err)
         finally:
             client.close()
-        print("[trades stream] wait 5 sec for reconnecting")
+        print("[orders stream] wait 5 sec for reconnecting")
         time.sleep(5)
 
 
 def get_orders_publisher():
-    url = "mongodb://localhost:27000"
+    url = "mongodb://127.0.0.1:27000"
     client = MongoClient(url, socketKeepAlive=True)
     db = client.test
+    coll = db['test']
 
     def send(orders):
         for order in orders:
             print(order)
 
-            print(json.dumps(order.__dict__))
-            db.orders.insert_one(order.__dict__)
+            # print(json.dumps(order.__dict__))
+            # for real use send_orders
+            coll.insert_one(order.toDict("robo", "cgate-gw"))
     return send
 
 
@@ -125,7 +168,8 @@ def robo_loop():
     while True:
         # event = receiver.recv_json()
         event = receiver.recv_pyobj()
-        print(event)
+        if not isinstance(event, DataEvent):
+            print(event)
         for action in root.do(event):
             actions.append(action)
         publish(actions)
@@ -134,10 +178,13 @@ def robo_loop():
 
 def run():
     data = threading.Thread(target=data_stream)
+    orders = threading.Thread(target=orders_stream)
     trades = threading.Thread(target=trades_stream)
     data.daemon = True
+    orders.daemon = True
     trades.daemon = True
     data.start()
+    orders.start()
     trades.start()
     robo_loop()
 

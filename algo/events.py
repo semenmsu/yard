@@ -23,8 +23,8 @@ class ControlEvent:
 class NewReplyEvent:
     def __init__(self, code, order_id):
         self.name = "new_reply"
-        self.code = code
-        self.order_id = order_id
+        self.code = int(code)
+        self.order_id = int(order_id)
         self.ext_id = 0
 
     def __repr__(self):
@@ -35,9 +35,9 @@ class NewReplyEvent:
 class CancelReplyEvent:
     def __init__(self, code, amount):
         self.name = "cancel_reply"
-        self.code = code
+        self.code = int(code)
         self.order_id = 0
-        self.amount = amount
+        self.amount = int(amount)
 
     def __repr__(self):
         ret = f"code={self.code} amount={self.amount} "
@@ -47,8 +47,8 @@ class CancelReplyEvent:
 class TradeReplyEvent:
     def __init__(self, amount, deal_price):
         self.name = "trade_reply"
-        self.amount = amount
-        self.deal_price = deal_price
+        self.amount = int(amount)
+        self.deal_price = int(deal_price)
         self.order_id = 0
         self.deal_id = 0
 

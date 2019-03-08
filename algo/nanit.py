@@ -10,10 +10,10 @@ class Nanit:
         #mount(self, self.short)
         self.buy_price = 0
         self.buy_by = 1
-        self.buy_limit = 5
+        self.buy_limit = 1
         self.sell_price = 0
         self.sell_by = 1
-        self.sell_limit = -5
+        self.sell_limit = -4
         self.current_price = 0
         self.profit_history = []
         self.store = parent.store
@@ -24,8 +24,8 @@ class Nanit:
 
     def update(self):
         #print("robo2 update si price = ", self.si.price)
-        self.buy_price = self.si.price - 7
-        self.sell_price = self.si.price + 7
+        self.buy_price = self.si.price - 6
+        self.sell_price = self.si.price + 4
         self.current_price = self.si.price
         buy_amount = self.buy_by
         sell_amount = self.sell_by
