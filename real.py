@@ -12,6 +12,7 @@ import json
 shared_context = zmq.Context()
 
 
+
 def to_robo(func):
     sender = shared_context.socket(zmq.PUB)
     sender.connect("inproc://robo")

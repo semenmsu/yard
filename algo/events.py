@@ -26,9 +26,10 @@ class NewReplyEvent:
         self.code = int(code)
         self.order_id = int(order_id)
         self.ext_id = 0
+        self.message = None
 
     def __repr__(self):
-        ret = f"code={self.code} order_id={self.order_id} ext_id={self.ext_id}"
+        ret = f"code={self.code} order_id={self.order_id} ext_id={self.ext_id} message={self.message}"
         return f"{colors.DATA_EVENT} NEW_REPLY_EVENT{colors.EVENT}  {ret}  {colors.ENDC}"
 
 
@@ -81,6 +82,7 @@ class TimeEvent:
     def __init__(self, time):
         self.name = "timer"
         self.time = time
+        self.type = None
 
     def __repr__(self):
-        return f"[data-event] {self.time}"
+        return f"[data-event] {self.time} type = {self.type}"

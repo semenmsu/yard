@@ -1,5 +1,7 @@
 from algo.order import *
 from algo.events import *
+from algo.data_source import *
+from algo.timers import *
 
 
 def add_child(to, child):
@@ -46,6 +48,9 @@ class Root:
             repr += str(child)+"\n"
         return repr
 
+    def add(self):
+        pass
+
     def processed_action(self, action):
         if action:
             if isinstance(action, NewOrder):
@@ -72,6 +77,152 @@ class Root:
 
         if isinstance(event, DataEvent):
             for action in self.store.update(event):
+                if self.processed_action(action):
+                    del action.source
+                    yield action
+        else:
+            node = None
+            if isinstance(event, NewReplyEvent):
+                if event.ext_id in self.nodes_by_extid:
+
+                    node = self.nodes_by_extid[event.ext_id]
+                    if event.code == 0:
+                        self.nodes_by_orderid[event.order_id] = node
+                    del self.nodes_by_extid[event.ext_id]
+                else:
+                    raise Exception(
+                        "can't find node with ext_id", event.ext_id)
+            elif isinstance(event, CancelReplyEvent):
+                if event.order_id in self.nodes_by_orderid:
+                    node = self.nodes_by_orderid[event.order_id]
+                else:
+                    raise Exception(
+                        "can't find node with order_id", event.order_id)
+            elif isinstance(event, TradeReplyEvent):
+                if event.order_id in self.nodes_by_orderid:
+                    node = self.nodes_by_orderid[event.order_id]
+                else:
+                    raise Exception(
+                        "can't find node with order_id", event.order_id)
+
+            else:
+                raise Exception("Unknown reply event", event)
+
+            for action in node.do2(event):
+                if self.processed_action(action):
+                    del action.source
+                    yield action
+
+            if isinstance(event, TradeReplyEvent):
+                for callback in self.trade_callbacks:
+                    callback(event)
+
+
+class Root2:
+    def __init__(self, machine_name, runner_name):
+        self.childs = []
+        self.machine = machine_name
+        self.name = runner_name
+        self.store = DataSource()
+        self.timers = Timers()
+
+        self.ext_id = 0
+        self.nodes_by_extid = dict()  # ext_id
+        self.nodes_by_orderid = dict()
+        self.trade_callbacks = []
+        self.location = "/"
+
+    def add(self, child):
+        child.add_to_parent(self)
+        self.timers.subscribe('5s', child.update)
+        self.childs.append(child)
+
+    def control(self, control_message):
+        if control_message.command() == "start":
+            name = control_message.message['name']
+            for child in self.childs:
+                if child.name == name:
+                    child.control(control_message)
+        elif control_message.command() == "stop":
+            name = control_message.message['name']
+            for child in self.childs:
+                if child.name == name:
+                    print("stop command for", child.name)
+                    child.control(control_message)
+        elif control_message.command() == "params":
+            print("handle params command")
+            name = control_message.message['name']
+            for child in self.childs:
+                if child.name == name:
+                    print("params command for", child.name)
+                    child.control(control_message)
+
+    def get_snapshot(self):
+        d = dict()
+        d['machine'] = self.machine
+        d['runner'] = self.name
+        strategies = []
+        for child in self.childs:
+            strategies.append(child.get_snapshot())
+        d['strategies'] = strategies
+        return d
+
+    def get_config(self):
+        d = dict()
+        d['machine'] = self.machine
+        d['runner'] = self.name
+        strategies = []
+        for child in self.childs:
+            print("config for child", child.name)
+            print(child.get_config())
+            strategies.append(child.get_config())
+        d['strategies'] = strategies
+        return d
+
+    def get_symbols(self):
+        return self.store.get_symbols()
+
+    def add_symbol_config(self, config):
+        print("rooooot ", config)
+        self.store.add_symbol_config(config)
+
+    def print_instruments(self):
+        self.store.print_instruments()
+
+    def processed_action(self, action):
+        if action:
+            if isinstance(action, NewOrder):
+                source = action.source
+                self.ext_id += 1
+                self.nodes_by_extid[self.ext_id] = source
+                action.ext_id = self.ext_id
+            elif isinstance(action, ReleaseOrder):
+                return None
+        return action
+
+    def on(self, event, callback, filter=None):
+        if event == 'trade':
+            if not callback in self.trade_callbacks:
+                if filter:
+                    def filtred_callback(trade):
+                        if filter(trade):
+                            callback(trade)
+                    self.trade_callbacks.append(callback)
+                else:
+                    self.trade_callbacks.append(callback)
+
+    def do(self, event=None):
+
+        if isinstance(event, DataEvent):
+            for action in self.store.update(event):
+                if self.processed_action(action):
+                    del action.source
+                    yield action
+        elif isinstance(event, TimeEvent):
+            #print("time event NOT IMPLEMENTED")
+            # self.timers.update(event)
+            # return
+            for action in self.timers.update(event):
                 if self.processed_action(action):
                     del action.source
                     yield action

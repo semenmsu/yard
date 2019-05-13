@@ -10,6 +10,7 @@ class OrderState:
         self.ext_id = 0
         self.order_id = 0  # ?
         self.price = 0
+        self.price_i = 0
         self.amount = 0
         self.rest_amount = 0
         self.dir = dir
@@ -24,6 +25,7 @@ class OrderState:
         self.order_id = 0
         self.amount = 0
         self.price = 0
+        self.price_i = 0
         self.rest_amount = 0
         self.sending_time = 0
         self.create_time = 0
@@ -105,7 +107,10 @@ class ReleaseOrder:
 class Order:
 
     def __init__(self, instrument, dir, restrictions=None):
-        self.name = "long"
+        if dir == 1:
+            self.name = "long"
+        else:
+            self.name = "short"
         self.instrument = instrument
         self.state = OrderState(dir)
         self.desire = OrderDesire()
@@ -120,13 +125,34 @@ class Order:
         self.dir = dir
         self.time = 0
         self.vid = 0  # virtual id
+        self.code = 0
+        self.message = 0
 
         if restrictions:
             self.restrictions = restrictions
         else:
             self.restrictions = lambda: False
 
+    def get_snapshot(self):
+        d = dict()
+        d = self.state.__dict__
+        # print(d)
+        #print("self.instrument", self.instrument)
+        d['symbol'] = self.instrument.symbol
+        d['ex_symbol'] = self.instrument.ex_symbol
+        d['name'] = self.name
+        d['order_id'] = self.state.order_id
+        d['ext_id'] = self.state.ext_id
+        if self.state.status == UNHANDLED_NEW_REPLY_CODE:
+            d['code'] = self.code
+            d['message'] = self.message
+
+        return d
+
+
 # utils
+
+
     def generate_new_order(self, state):
         order = NewOrder(self.isin_id, self.dir)
         order.price = state.price
@@ -141,12 +167,12 @@ class Order:
         return cancel
 
     def price_changing_is_big(self):
-        if abs(self.desire.price - self.state.price) > self.change_price_limit:
+        if abs(self.desire.price - self.state.price_i) > self.change_price_limit*self.instrument.min_step_price_i:
             return True
         return False
 
     def should_update_price(self, price, amount):
-        if abs(price - self.state.price) > self.change_price_limit:
+        if abs(price - self.state.price_i) > self.change_price_limit*self.instrument.min_step_price_i:
             return True
 
         if self.state.amount > 0 and amount == 0:  # should cancel
@@ -161,12 +187,15 @@ class Order:
         if action.name == "new":
             next_state = copy.copy(state)
             next_state.status = PENDING_NEW
-            next_state.price = desire.price
+            #next_state.price = desire.price
+            next_state.price_i = desire.price
+            next_state.price = self.instrument.get_real_price(desire.price)
             next_state.amount = desire.amount
             next_state.rest_amount = desire.amount
             next_state.inc()
             order = self.generate_new_order(next_state)
-            order.symbol = self.instrument.symbol
+            #order.symbol = self.instrument.symbol
+            order.symbol = self.instrument.ex_symbol
             return next_state, order
 
         elif action.name == "cancel":
@@ -174,15 +203,25 @@ class Order:
             next_state.status = PENDING_CANCEL
             next_state.inc()
             cancel = self.generate_cancel_order(next_state)
-            cancel.symbol = self.instrument.symbol
+            #cancel.symbol = self.instrument.symbol
+            cancel.symbol = self.instrument.ex_symbol
             return next_state, cancel
 
     def reply_new(self, new_reply):
         if new_reply.code != 0:
-            raise Exception("new_reply.code != 0. Not Implemented")
-        self.state.order_id = new_reply.order_id
-        self.state.status = NEW
-        self.state.inc()
+            if new_reply.code == 31:
+                self.state.free()
+                self.state.inc()
+            else:
+                #raise Exception("new_reply.code != 0. Not Implemented")
+                self.state.status = UNHANDLED_NEW_REPLY_CODE
+                self.code = new_reply.code
+                self.message = new_reply.message
+                self.state.inc()
+        else:
+            self.state.order_id = new_reply.order_id
+            self.state.status = NEW
+            self.state.inc()
 
     def reply_cancel(self, cancel_reply):
         order_id = self.state.order_id
@@ -205,7 +244,7 @@ class Order:
             return ReleaseOrder(self.vid, order_id)
 
     def reply_trade(self, deal):
-        #print("reply trade",deal)
+        print("reply trade", deal)
         self.state.rest_amount -= deal.amount
         self.total_money += deal.money()
         self.total_trades += deal.amount
@@ -273,6 +312,10 @@ class Order:
         elif self.state.status == PENDING_CANCEL:
             pass
         elif self.state.status == CANCELED:
+            pass
+        elif self.state.status == UNHANDLED_CANCEL_REPLY_CODE:
+            pass
+        elif self.state.status == UNHANDLED_NEW_REPLY_CODE:
             pass
 
         return action

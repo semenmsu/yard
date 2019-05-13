@@ -54,9 +54,8 @@ def to_robo(func):
 
                 action = int(event['action'])
                 if action == 2:
-                    intpart = int(event['deal_price']['intpart'])
-                    scale = int(event['deal_price']['scale'])
-                    deal_price = int(intpart/10**scale)
+                    print(event)
+                    deal_price = int(event['deal_price'])
                     reply = TradeReplyEvent(
                         int(event['amount']), deal_price)
                     reply.order_id = int(event['orderid'])
@@ -351,6 +350,12 @@ def load_config(root):
         root.print_instruments()
 
 
+class ErrorResolver:
+
+    def __init__(self):
+        pass
+
+
 def robo_loop():
 
     root = Root2("ubuntu", "robo")
@@ -361,7 +366,7 @@ def robo_loop():
     receiver.bind("inproc://robo")
     receiver.subscribe(b'')
     publish_snapshot = get_snapshot_publisher()
-    actions = []
+    orders = []
     publish = get_orders_publisher()
     while True:
         # event = receiver.recv_json()
@@ -378,10 +383,11 @@ def robo_loop():
             snapshot = root.get_snapshot()
             publish_snapshot(snapshot)
 
-        for action in root.do(event):
-            actions.append(action)
-        publish(actions)
-        actions = []
+        for order in root.do(event):
+            print("order: ", order)
+            orders.append(order)
+        publish(orders)
+        orders = []
 
 
 def run():
