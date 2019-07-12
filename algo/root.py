@@ -121,6 +121,7 @@ class Root:
 class Root2:
     def __init__(self, machine_name, runner_name):
         self.childs = []
+        self.strategies = {}
         self.machine = machine_name
         self.name = runner_name
         self.store = DataSource()
@@ -134,6 +135,8 @@ class Root2:
 
     def add(self, child):
         child.add_to_parent(self)
+        print("child name: ", child.name)
+        self.strategies[child.name] = child
         self.timers.subscribe('5s', child.update)
         self.childs.append(child)
 
@@ -167,6 +170,10 @@ class Root2:
         d['strategies'] = strategies
         return d
 
+    def get_state(self):
+        for child in self.childs:
+            print(child.get_state())
+
     def get_config(self):
         d = dict()
         d['machine'] = self.machine
@@ -183,7 +190,6 @@ class Root2:
         return self.store.get_symbols()
 
     def add_symbol_config(self, config):
-        print("rooooot ", config)
         self.store.add_symbol_config(config)
 
     def print_instruments(self):

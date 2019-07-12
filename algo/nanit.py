@@ -159,6 +159,14 @@ class Nanit2:
         d['sell_by'] = self.sell_by
         return d
 
+    def get_state(self):
+        d = dict()
+        d['position'] = self.position()
+        d['profit'] = self.profit()
+        d['long'] = self.long.get_state()
+        d['short'] = self.short.get_state()
+        return d
+
     # lazy initialization
 
     def add_to_parent(self, parent):

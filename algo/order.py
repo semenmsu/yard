@@ -94,6 +94,23 @@ class CancelOrder:
         return f"{colors.CANCEL_ORDER} CANCEL_ORDER {colors.ACTION}  {ret}  {colors.ENDC}"
 
 
+def create_order_from_json(message):
+    name = message["name"]
+    if name == "new_order":
+        #{'name': 'new_order', 'user_code': 1, 'isin_id': 1, 'symbol': 'Si-9.19', 'ext_id': 1, 'price': 63620, 'amount': 1, 'dir': 1, 'vid': 0}
+        order = NewOrder(message['isin_id'], message['dir'])
+        order.user_code = message["user_code"]
+        order.symbol = message["symbol"]
+        order.ext_id = message["ext_id"]
+        order.price = message["price"]
+        order.amount = message["amount"]
+        order.vid = message["vid"]
+        return order
+    elif name == "cancel_order":
+        #{'name': 'cancel_reply', 'code': 0, 'order_id': 2311185157, 'amount': 1}
+        pass
+
+
 class ReleaseOrder:
     def __init__(self, vid, order_id):
         self.vid = vid
@@ -149,9 +166,16 @@ class Order:
 
         return d
 
+    def get_state(self):
+        d = dict()
+        d['state'] = self.state.__dict__
+        d['vid'] = self.vid
+        d['code'] = self.code
+        d['message'] = self.message
+        return d
+
 
 # utils
-
 
     def generate_new_order(self, state):
         order = NewOrder(self.isin_id, self.dir)
@@ -269,7 +293,6 @@ class Order:
 
 # generate actions, but don't change state?
 # should be pure functions? should use another state, more global
-
 
     def handle_free_state(self):
         # print("hande_free_state")

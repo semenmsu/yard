@@ -45,6 +45,7 @@ def to_robo(func):
                 elif _type == "cancel_reply":
                     reply = CancelReplyEvent(event['code'], event['amount'])
                     reply.order_id = int(event['order_id'])
+                # ???????????????? trade_reply???
                 elif _type == "trade_reply":
                     reply = TradeReplyEvent(
                         event['amount'], event['deal_price'])
@@ -174,15 +175,7 @@ def get_orders_publisher():
     return send
 
 
-class ControlMessage:
-    def __init__(self, message):
-        self.message = message
 
-    def __repr__(self):
-        return str(self.message)
-
-    def command(self):
-        return self.message['command']
 
 
 @to_robo
@@ -289,11 +282,14 @@ def find_instrument_and_subscribe(root, exchange_symbol):
     [exchange, symbol] = exchange_symbol.split('@')
     print(exchange, symbol)
     find_instrument(exchange, symbol)
-    if exchange_cache[exchange][symbol]:
+    if symbol in exchange_cache[exchange]:
         config = exchange_cache[exchange][symbol]
         config['symbol'] = exchange_symbol
         print("config", config)
         root.add_symbol_config(config)
+    else:
+        print("can't find ", exchange_symbol)
+
     # subscribe_queue.put(symbol)
     subscribe_queue.put(exchange_symbol)
 
@@ -356,6 +352,27 @@ class ErrorResolver:
         pass
 
 
+debug = True
+
+
+def get_event_type(event):
+
+    if isinstance(event, DataEvent):
+        return "data"
+    elif isinstance(event, ControlMessage):
+        return "control"
+    elif isinstance(event, TimeEvent):
+        return "timer"
+    elif isinstance(event, NewReplyEvent):
+        return "new_reply"
+    elif isinstance(event, CancelReplyEvent):
+        return "cancel_reply"
+    elif isinstance(event, TradeReplyEvent):
+        return "trade_reply"
+    else:
+        raise Exception("unknow event", event)
+
+
 def robo_loop():
 
     root = Root2("ubuntu", "robo")
@@ -368,26 +385,34 @@ def robo_loop():
     publish_snapshot = get_snapshot_publisher()
     orders = []
     publish = get_orders_publisher()
-    while True:
-        # event = receiver.recv_json()
-        event = receiver.recv_pyobj()
-        if not isinstance(event, DataEvent) and not isinstance(event, TimeEvent):
-            print(event)
-        if isinstance(event, ControlMessage):
-            handle_control(root, event)
-            snapshot = root.get_snapshot()
-            publish_snapshot(snapshot)
-            continue
+    with open("log/messages.txt", "w") as f:
+        while True:
+            # event = receiver.recv_json()
 
-        if isinstance(event, TimeEvent):
-            snapshot = root.get_snapshot()
-            publish_snapshot(snapshot)
+            event = receiver.recv_pyobj()
+            f.write(
+                str({"ts": int(time.time()*1000000), "type": get_event_type(event),  "body": event.__dict__})+"\n")
+            if not isinstance(event, DataEvent) and not isinstance(event, TimeEvent):
+                print(event)
+            if isinstance(event, ControlMessage):
+                handle_control(root, event)
+                snapshot = root.get_snapshot()
+                publish_snapshot(snapshot)
+                continue
 
-        for order in root.do(event):
-            print("order: ", order)
-            orders.append(order)
-        publish(orders)
-        orders = []
+            if isinstance(event, TimeEvent):
+                f.flush()
+                snapshot = root.get_snapshot()
+                publish_snapshot(snapshot)
+
+            for order in root.do(event):
+                print("order: ", order)
+                orders.append(order)
+                f.write(str({
+                    "ts": int(time.time()*1000000), "type": "order", "body": order.__dict__
+                })+"\n")
+            publish(orders)
+            orders = []
 
 
 def run():
