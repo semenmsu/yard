@@ -64,6 +64,36 @@ class NewOrder:
         self.vid = 0
         self.source = None
 
+    def from_json(d):
+        # {'name': 'new_order', 'user_code': 1, 'isin_id': 1, 'symbol': 'Si-9.19', 'ext_id': 2, 'price': 63628, 'amount': 1, 'dir': 2, 'vid': 0}}
+        order = NewOrder(int(d["isin_id"]), int(d["dir"]))
+        order.user_code = d['user_code']
+        order.symbol = d["symbol"]
+        order.ext_id = d["ext_id"]
+        order.price = d["price"]
+        order.amount = d["amount"]
+        order.vid = d["vid"]
+        return order
+
+    def compare(self, that):
+        # price=63615 amount=1 dir=1 vid=0 ext_id=65
+        if self.price != that.price:
+            return 0
+
+        if self.amount != that.amount:
+            return 0
+
+        if self.dir != that.dir:
+            return 0
+
+        if self.vid != self.vid:
+            return 0
+
+        if self.ext_id != that.ext_id:
+            return 0
+
+        return 1
+
     def toDict(self, robo_name, to):
         d = {"from": robo_name, "to": to, "type": self.name, "price": str(self.price), "amount": str(self.amount),
              "side": str(self.dir), "symbol": self.symbol, "ext_id": str(self.ext_id)}
@@ -83,6 +113,25 @@ class CancelOrder:
         self.vid = 0
         self.source = None
         self.symbol = None
+
+    def from_json(d):
+        #{'name': 'cancel_order', 'isin_id': 1, 'user_code': 1, 'order_id': 2311185157, 'vid': 0, 'symbol': 'Si-9.19'}
+        order = CancelOrder(int(d["isin_id"]))
+        order.user_code = d["user_code"]
+        order.order_id = d["order_id"]
+        order.vid = d["vid"]
+        order.symbol = d["symbol"]
+        return order
+
+    def compare(self, that):
+        # order_id=2311213677 vid=0
+        if self.order_id != that.order_id:
+            return 0
+
+        if self.vid != that.vid:
+            return 0
+
+        return 1
 
     def toDict(self, robo_name, to):
         d = {"from": robo_name, "to": to, "type": self.name,
@@ -107,7 +156,7 @@ def create_order_from_json(message):
         order.vid = message["vid"]
         return order
     elif name == "cancel_order":
-        #{'name': 'cancel_reply', 'code': 0, 'order_id': 2311185157, 'amount': 1}
+        #{'name': 'cancel_order', 'isin_id': 1, 'user_code': 1, 'order_id': 2311185157, 'vid': 0, 'symbol': 'Si-9.19'}
         pass
 
 
@@ -176,6 +225,7 @@ class Order:
 
 
 # utils
+
 
     def generate_new_order(self, state):
         order = NewOrder(self.isin_id, self.dir)
@@ -268,7 +318,7 @@ class Order:
             return ReleaseOrder(self.vid, order_id)
 
     def reply_trade(self, deal):
-        print("reply trade", deal)
+        #print("reply trade", deal)
         self.state.rest_amount -= deal.amount
         self.total_money += deal.money()
         self.total_trades += deal.amount
@@ -293,6 +343,7 @@ class Order:
 
 # generate actions, but don't change state?
 # should be pure functions? should use another state, more global
+
 
     def handle_free_state(self):
         # print("hande_free_state")

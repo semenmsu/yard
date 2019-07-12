@@ -171,8 +171,11 @@ class Root2:
         return d
 
     def get_state(self):
+        root_state = {}
         for child in self.childs:
-            print(child.get_state())
+            root_state[child.name] = child.get_state()
+            # print(child.get_state())
+        return root_state
 
     def get_config(self):
         d = dict()

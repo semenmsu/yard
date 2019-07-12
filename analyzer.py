@@ -2,6 +2,7 @@ import json
 from algo.events import *
 from algo.root import *
 from algo.nanit import *
+from algo.order import *
 from pymongo import MongoClient
 
 instruments = {}
@@ -23,8 +24,13 @@ def get_event_from_json(message):
         return event
     elif t == "order":
         #print("This is order")
+        if message["body"]["name"] == "new_order":
+            event = NewOrder.from_json(message["body"])
+            return event
+        elif message["body"]["name"] == "cancel_order":
+            event = CancelOrder.from_json(message["body"])
+            return event
         return None
-        return event
     elif t == "new_reply":
         event = NewReplyEvent.from_json(message["body"])
         #print("this is new_reply", event)
@@ -124,40 +130,31 @@ def handle_control(root, control):
         root.control(control)
 
 
-'''
-def read_events2(root):
-    with open("log/messages-12.txt", "r") as f:
-        for line in f:
-            #json_line = line.replace("'", "\"")
-            # print(json_line)
-            #d = json.loads(line.replace("'", "\""))
-            # print(d["ts"])
-            d = get_json_from_line(line)
-            # print(d["ts"])
-            event = get_event_from_json(d)
-            if event:
-                # if not isinstance(event, DataEvent) and not isinstance(event, TimeEvent):
-                #    print(event)
-                print("line", line)
-                print(event)
-                if isinstance(event, ControlMessage):
-                    handle_control(root, event)
-                    #snapshot = root.get_snapshot()
-                    # publish_snapshot(snapshot)
-                    continue
+def insert_generated_events_to_db(generated_events):
+    #url = "mongodb://127.0.0.1:27000"
+    url = "mongodb://172.26.1.2:27017,172.26.1.3:27018/test?replicaSet=rs0"
+    client = MongoClient(url, socketKeepAlive=True)
+    db = client.test
+    coll = db['analyzer']
+    coll.insert_many(generated_events)
 
-                if isinstance(event, TimeEvent):
-                    # f.flush()
-                    #snapshot = root.get_snapshot()
-                    # publish_snapshot(snapshot)
-                    pass
 
-                for order in root.do(event):
-                    #event, state, order
-                    print(order)
-                    print(root.get_state())
-                    input("Press Enter to continue...")
-'''
+def get_event_type(event):
+
+    if isinstance(event, DataEvent):
+        return "data"
+    elif isinstance(event, ControlMessage):
+        return "control"
+    elif isinstance(event, TimeEvent):
+        return "timer"
+    elif isinstance(event, NewReplyEvent):
+        return "new_reply"
+    elif isinstance(event, CancelReplyEvent):
+        return "cancel_reply"
+    elif isinstance(event, TradeReplyEvent):
+        return "trade_reply"
+    else:
+        raise Exception("unknow event", event)
 
 
 def read_events(root):
@@ -169,21 +166,50 @@ def read_events(root):
             if event:
                 events.append(event)
 
-    for event in events:
+    i = 0
+
+    events_with_states = []
+    uniq_id = 0
+    while i < len(events):
+        event = events[i]
         if event:
-            print(event)
+            # print(event)
+            event.uniq_id = uniq_id
+
             if isinstance(event, ControlMessage):
                 handle_control(root, event)
-                continue
+                events_with_states.append(
+                    {"uniq_id": uniq_id, "type": "data", "body": event.__dict__})
+                uniq_id += 1
+            elif isinstance(event, TimeEvent):
+                events_with_states.append(
+                    {"uniq_id": uniq_id, "type": "timer", "body": event.__dict__})
+                uniq_id += 1
+            else:
+                events_with_states.append(
+                    {"uniq_id": uniq_id, "type": get_event_type(event), "body": event.__dict__})
+                for order in root.do(event):
+                    if i+1 < len(events):
+                        i += 1
+                        next_event = events[i]
+                        if order.compare(next_event) != 1:
+                            raise Exception("orders not equal")
+                        events_with_states.append({
+                            "uniq_id": uniq_id, "ts": 0, "type": "order", "body": order.__dict__
+                        })
+                    # print(root.get_state())
+                    events_with_states.append({
+                        "uniq_id": uniq_id, "ts": 0, "type": "state", "body": root.get_state()
+                    })
+                uniq_id += 1
 
-            if isinstance(event, TimeEvent):
-                pass
+                #input("Press Enter to continue...")
+        i += 1
 
-            for order in root.do(event):
-                #event, state, order
-                print(order)
-                print(root.get_state())
-                input("Press Enter to continue...")
+    insert_generated_events_to_db(events_with_states)
+    # with open("log/analyzer.txt", "w") as f:
+    #    for event in events_with_states:
+    #        f.write(str(event))
 
 
 def run_simulation():
