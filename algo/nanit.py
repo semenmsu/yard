@@ -76,7 +76,7 @@ class Nanit2:
     def __init__(self, config):
         #self.type = type(self).__name__
         self.type = "Nanit"
-        print("MY type!!!!!!!!!!!!!!!!!!!!!!!!", self.type)
+        #print("MY type!!!!!!!!!!!!!!!!!!!!!!!!", self.type)
         self.buy_price = 0
         self.buy_by = 1
         self.buy_limit = 1
@@ -99,6 +99,24 @@ class Nanit2:
         #self.short = Order(instrument=self.trade_instrument , dir=SELL)
         self.status = "stopped"
 
+        if 'buy_shift' in config:
+            self.buy_shift = int(config['buy_shift'])
+
+        if 'sell_shift' in config:
+            self.sell_shift = int(config['sell_shift'])
+
+        if 'buy_by' in config:
+            self.buy_by = int(config['buy_by'])
+
+        if 'sell_by' in config:
+            self.sell_by = int(config['sell_by'])
+
+        if 'buy_limit' in config:
+            self.buy_limit = int(config["buy_limit"])
+
+        if 'sell_limit' in config:
+            self.sell_limit = int(config["sell_limit"])
+
     def get_snapshot(self):
         d = dict()
         d['type'] = self.type
@@ -106,6 +124,7 @@ class Nanit2:
         d['position'] = self.position()
         d['profit'] = self.profit()
         d['status'] = self.status
+        d['total_trades'] = self.total_trades()
         d['bid'] = self.trade_instrument.get_real_price(self.buy_price)
         d['ask'] = self.trade_instrument.get_real_price(self.sell_price)
         childs = []
@@ -157,6 +176,9 @@ class Nanit2:
         d['buy_by'] = self.buy_by
         d['sell_limit'] = self.sell_limit
         d['sell_by'] = self.sell_by
+        d['buy_shift'] = self.buy_shift
+        d['sell_shift'] = self.sell_shift
+
         return d
 
     def get_state(self):
@@ -252,3 +274,6 @@ class Nanit2:
         money = -self.long.total_money + self.short.total_money
         profit = money + self.position()*self.current_price
         return profit
+
+    def total_trades(self):
+        return self.long.total_trades + self.short.total_trades

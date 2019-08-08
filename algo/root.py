@@ -140,6 +140,7 @@ class Root2:
         self.timers.subscribe('5s', child.update)
         self.childs.append(child)
 
+
     def control(self, control_message):
         if control_message.command() == "start":
             name = control_message.message['name']
@@ -153,11 +154,11 @@ class Root2:
                     print("stop command for", child.name)
                     child.control(control_message)
         elif control_message.command() == "params":
-            print("handle params command")
+            #print("handle params command")
             name = control_message.message['name']
             for child in self.childs:
                 if child.name == name:
-                    print("params command for", child.name)
+                    #print("params command for", child.name)
                     child.control(control_message)
 
     def get_snapshot(self):
@@ -169,6 +170,12 @@ class Root2:
             strategies.append(child.get_snapshot())
         d['strategies'] = strategies
         return d
+
+    def show(self):
+        #for strategy in self.get_snapshot()["strategies"]:
+        #    print("name: %s profit: %d position %d" % (
+        #        strategy["name"], int(strategy["profit"])/1000000, strategy["position"]))
+        return self.get_snapshot()["strategies"]
 
     def get_state(self):
         root_state = {}

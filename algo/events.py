@@ -34,7 +34,7 @@ class ControlMessage:
         return event
 
     def __repr__(self):
-        return str(self.message)
+        return f"{self.ts} {self.message}"
 
     def command(self):
         return self.message['command']
@@ -49,7 +49,7 @@ class NewReplyEvent:
         self.message = None
 
     def from_json(d):
-        #{'name': 'new_reply', 'code': 0, 'order_id': 2311185157, 'ext_id': 1, 'message': 'Operation successful.'}
+        # {'name': 'new_reply', 'code': 0, 'order_id': 2311185157, 'ext_id': 1, 'message': 'Operation successful.'}
         code = d["code"]
         order_id = d["order_id"]
         ext_id = int(d["ext_id"])
@@ -91,6 +91,8 @@ class TradeReplyEvent:
         self.deal_price = int(deal_price)
         self.order_id = 0
         self.deal_id = 0
+        self.dir = 0
+        self.symbol = ""
 
     def money(self):
         return self.amount * self.deal_price
@@ -108,6 +110,9 @@ class TradeReplyEvent:
     def __repr__(self):
         ret = f"deal_price={self.deal_price} amount={self.amount}"
         return f"{colors.EVENT} TRADE_EVENT   {ret} {colors.ENDC}"
+
+    def get_csv(self):
+        return f"{self.symbol},{self.dir},{self.deal_price},{self.amount},{self.order_id},"
 
 
 class DataOrderEvent:

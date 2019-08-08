@@ -100,7 +100,7 @@ class NewOrder:
         return d
 
     def __repr__(self):
-        ret = f"price={self.price} amount={self.amount} dir={self.dir} vid={self.vid} ext_id={self.ext_id}"
+        ret = f"symbol={self.symbol} isin_id={self.isin_id} price={self.price} amount={self.amount} dir={self.dir} vid={self.vid} ext_id={self.ext_id}"
         return f"{colors.NEW_ORDER}  NEW_ORDER {colors.ACTION}  {ret}  {colors.ENDC}"
 
 
@@ -180,7 +180,6 @@ class Order:
         self.instrument = instrument
         self.state = OrderState(dir)
         self.desire = OrderDesire()
-
         self.session_id = 0
         self.total_money = 0
         self.total_trades = 0
@@ -193,7 +192,6 @@ class Order:
         self.vid = 0  # virtual id
         self.code = 0
         self.message = 0
-
         if restrictions:
             self.restrictions = restrictions
         else:
@@ -268,8 +266,8 @@ class Order:
             next_state.rest_amount = desire.amount
             next_state.inc()
             order = self.generate_new_order(next_state)
-            #order.symbol = self.instrument.symbol
-            order.symbol = self.instrument.ex_symbol
+            order.symbol = self.instrument.symbol
+            #order.symbol = self.instrument.ex_symbol
             return next_state, order
 
         elif action.name == "cancel":
@@ -277,8 +275,8 @@ class Order:
             next_state.status = PENDING_CANCEL
             next_state.inc()
             cancel = self.generate_cancel_order(next_state)
-            #cancel.symbol = self.instrument.symbol
-            cancel.symbol = self.instrument.ex_symbol
+            cancel.symbol = self.instrument.symbol
+            #cancel.symbol = self.instrument.ex_symbol
             return next_state, cancel
 
     def reply_new(self, new_reply):

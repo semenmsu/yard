@@ -70,6 +70,8 @@ class DataSource:
             self.symbols[event.symbol].price = event.price
             for subscriber in self.symbols[event.symbol].subscribers:
                 yield from subscriber.update()
+        else:
+            raise Exception(f"unknow symbol {event.symbol}")
 
     def subscribe(self, symbol, source):
         if not symbol in self.symbols:
@@ -98,6 +100,7 @@ class DataSource:
         instrument = self.symbols[symbol]
         for key, value in config.items():
             instrument.update_property(key, value)
+
 
     def print_instruments(self):
         for symbol, instrument in self.symbols.items():
