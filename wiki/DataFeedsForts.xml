@@ -1,0 +1,19 @@
+<templates>
+    <template name="trade_reply">
+        <string name="type"><constant value="trade_reply"/></string>
+        <string name="from"/>
+        <string name="to"/>
+        <string name="exchange" presence="optional"></string>
+        <int name="lifenum"/>
+        <int64 name="revision"/>
+        <int name="sess_id"/>
+        <int64 name="order_id"/>
+        <int name="isin_id"/>
+        <int name="action"/>
+        <int64 name="deal_price"/>
+        <int name="amount"/>
+        <int name="dir"/>
+        <int name="ext_id"/>
+        <string name="comment"/>
+    </template>
+</templates>

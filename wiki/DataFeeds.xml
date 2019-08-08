@@ -1,0 +1,6 @@
+<templates>
+    <template name="data" id="1">
+        <string name="symbol" id="55"></string>
+        <int64 name="price" id="44"></string>
+    </template>
+</templates>

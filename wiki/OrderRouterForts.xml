@@ -1,0 +1,47 @@
+<templates>
+    <template name="new_order" id="1">
+        <string name="type"><constant value="new_order"/></string>
+        <string name="from"/>
+        <string name="to"/>
+        <string name="exchange">
+        <int name="user_code"></int>
+        <int name="isin_id" presence="optional"></int>
+        <string name="symbol" presence="optional"></string>
+        <int name="ext_id"></int>
+        <int64 name="price"></int64>
+        <int name="amount"></int>
+        <int name="dir"></int>
+        <int name="vid" presence="optional"></int> <!-->virtual id<-->
+    </template>
+
+    <template name="cancel_order" id="1">
+        <string name="type"><constant value="cancel_order"/></string>
+        <string name="from"/>
+        <string name="to"/>
+        <int name="user_code"></int>
+        <int name="order_id"></int>
+        <string name="exchange"></string>
+        <int name="vid"></int>
+    </template>
+
+    <template name="new_reply">
+        <string name="type"><constant value="new_reply"/></string>
+        <string name="from"/>
+        <string name="to"/>
+        <int name="code"></int>
+        <int64 name="order_id"></int64>
+        <int name="ext_id"></int>
+        <string name="message"></string>
+    </template>
+
+    <template name="cancel_reply">
+        <string name="type"><constant value="cancel_reply"/></string>
+        <string name="from"/>
+        <string name="to"/>
+        <int name="code"></int>
+        <int64 name="order_id"></int64>
+        <int name="ext_id"></int>
+        <int name="amount"></int> <!-->how many canceled<-->
+        <string name="message"></string>
+    </template>
+</templates>

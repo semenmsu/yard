@@ -1,0 +1,40 @@
+<templates>
+
+    <!-->example : {'name': 'timer', 'time': 1562922729.984771, 'timer_type': '5s'}}<-->
+    <template name="timer"> 
+        <string name="type"><constant value="timer"/></string>
+        <string name="timer_type"/>
+        <int64 name="time"/>
+    </template>
+
+    <!-->контролируется непостредственно роботы и их конфиги<-->
+    <!-->старое название control<-->
+    <template name="robo_control">
+        <string name="machine"/>
+        <string name="runner"/>
+        <string name="to"/>
+        <string name="name"/>
+        <string name="command">
+            <string name="add_robot"/>
+            <string name="params">
+            <string name="save">
+            <string name="start">
+            <string name="stop">
+        </string>
+        <string name="value" presence="optional">
+        <string name="param" presence="optional">
+        <string name="type" presence="optional">
+        <json name="config" presence="optional">
+        </json>
+        
+    </template>
+
+    <!-->сообщается о старте торговых сессий, проблемах, клирингах<-->
+    <template name="session_status">
+    </template>
+
+    <!-->общее состояние системы, например, 
+    сильно загружен, нехватка памяти<-->
+    <template name="system_control">
+    </template>
+</templates>
