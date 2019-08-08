@@ -175,9 +175,6 @@ def get_orders_publisher():
     return send
 
 
-
-
-
 @to_robo
 def timer_stream():
     while True:
