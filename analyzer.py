@@ -131,11 +131,11 @@ def handle_control(root, control):
 
 
 def insert_generated_events_to_db(generated_events):
-    #url = "mongodb://127.0.0.1:27000"
     url = "mongodb://172.26.1.2:27017,172.26.1.3:27018/test?replicaSet=rs0"
     client = MongoClient(url, socketKeepAlive=True)
     db = client.test
     coll = db['analyzer']
+    coll.drop()
     coll.insert_many(generated_events)
 
 
@@ -159,7 +159,7 @@ def get_event_type(event):
 
 def read_events(root):
     events = []
-    with open("log/messages-12.txt", "r") as f:
+    with open("log/messages.txt", "r") as f:
         for line in f:
             d = get_json_from_line(line)
             event = get_event_from_json(d)
@@ -167,27 +167,25 @@ def read_events(root):
                 events.append(event)
 
     i = 0
-
     events_with_states = []
     uniq_id = 0
     while i < len(events):
         event = events[i]
         if event:
-            # print(event)
             event.uniq_id = uniq_id
-
             if isinstance(event, ControlMessage):
                 handle_control(root, event)
                 events_with_states.append(
                     {"uniq_id": uniq_id, "type": "data", "body": event.__dict__})
                 uniq_id += 1
-            elif isinstance(event, TimeEvent):
-                events_with_states.append(
-                    {"uniq_id": uniq_id, "type": "timer", "body": event.__dict__})
-                uniq_id += 1
             else:
-                events_with_states.append(
-                    {"uniq_id": uniq_id, "type": get_event_type(event), "body": event.__dict__})
+                if isinstance(event, TimeEvent):
+                    events_with_states.append(
+                        {"uniq_id": uniq_id, "type": "timer", "body": event.__dict__})
+                else:
+                    events_with_states.append(
+                        {"uniq_id": uniq_id, "type": get_event_type(event), "body": event.__dict__})
+
                 for order in root.do(event):
                     if i+1 < len(events):
                         i += 1
@@ -197,19 +195,14 @@ def read_events(root):
                         events_with_states.append({
                             "uniq_id": uniq_id, "ts": 0, "type": "order", "body": order.__dict__
                         })
-                    # print(root.get_state())
+
                     events_with_states.append({
                         "uniq_id": uniq_id, "ts": 0, "type": "state", "body": root.get_state()
                     })
                 uniq_id += 1
-
-                #input("Press Enter to continue...")
         i += 1
 
     insert_generated_events_to_db(events_with_states)
-    # with open("log/analyzer.txt", "w") as f:
-    #    for event in events_with_states:
-    #        f.write(str(event))
 
 
 def run_simulation():
@@ -226,44 +219,3 @@ def run_simulation():
 
 
 run_simulation()
-
-'''
-root = Root2("ubuntu", "robo")
-    #robo = TestRobo("spreader")
-    # root.add(robo)
-    load_config(root)
-    receiver = shared_context.socket(zmq.SUB)
-    receiver.bind("inproc://robo")
-    receiver.subscribe(b'')
-    publish_snapshot = get_snapshot_publisher()
-    orders = []
-    publish = get_orders_publisher()
-    with open("log/messages.txt", "w") as f:
-        while True:
-            # event = receiver.recv_json()
-
-            event = receiver.recv_pyobj()
-            f.write(
-                str({"ts": int(time.time()*1000000), "type": get_event_type(event),  "body": event.__dict__})+"\n")
-            if not isinstance(event, DataEvent) and not isinstance(event, TimeEvent):
-                print(event)
-            if isinstance(event, ControlMessage):
-                handle_control(root, event)
-                snapshot = root.get_snapshot()
-                publish_snapshot(snapshot)
-                continue
-
-            if isinstance(event, TimeEvent):
-                f.flush()
-                snapshot = root.get_snapshot()
-                publish_snapshot(snapshot)
-
-            for order in root.do(event):
-                print("order: ", order)
-                orders.append(order)
-                f.write(str({
-                    "ts": int(time.time()*1000000), "type": "order", "body": order.__dict__
-                })+"\n")
-            publish(orders)
-            orders = []
-'''
